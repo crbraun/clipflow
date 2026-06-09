@@ -10,7 +10,7 @@ Interactive CLI for merging race camera clips and compositing a mirrored rear in
 4. Concatenate both sequences
 5. Crop the rear video to remove the bottom 45%, mirror it, and shrink it to 45% for the inset overlay
 6. Overlay the rear inset at the top center of the forward video
-7. Export a single MP4 using **rear camera audio only**
+7. Export a single MP4 using **forward camera audio only**
 
 ## Requirements
 

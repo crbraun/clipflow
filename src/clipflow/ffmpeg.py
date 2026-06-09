@@ -168,7 +168,7 @@ def composite_videos(
             "-map",
             "[outv]",
             "-map",
-            "1:a?",
+            "0:a?",
             "-c:v",
             "libx264",
             "-crf",
