@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.clipflow-work/
+
+# Output
+*.mp4
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

@@ -1,0 +1,24 @@
+[project]
+name = "clipflow"
+version = "0.1.0"
+description = "Merge race camera clips and composite a mirrored rear inset"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "questionary>=2.0.0",
+    "rich>=13.0.0",
+    "typer>=0.12.0",
+]
+
+[project.scripts]
+clipflow = "clipflow.main:app"
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
