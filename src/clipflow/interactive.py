@@ -7,6 +7,7 @@ from questionary import Style
 from rich.console import Console
 from rich.table import Table
 
+from clipflow.config import DEFAULT_SOURCE_DIR
 from clipflow.ffmpeg import sort_clips, validate_pairing
 from clipflow.matching import format_mtime, format_video_label, match_rear_by_mtime
 from clipflow.models import JobConfig
@@ -95,35 +96,13 @@ def ask_output_path(default: Path) -> Path:
     return path
 
 
-def ask_overlay_scale(default: float = 0.10) -> float:
-    answer = questionary.text(
-        "Rear inset scale (fraction of cropped rear size)",
-        default=str(default),
-        validate=lambda value: _validate_scale(value),
-        style=PROMPT_STYLE,
-    ).ask()
-    if answer is None:
-        raise KeyboardInterrupt
-    return float(answer)
-
-
-def _validate_scale(value: str) -> bool | str:
-    try:
-        number = float(value)
-    except ValueError:
-        return "Enter a number, e.g. 0.10"
-    if not 0.01 <= number <= 1.0:
-        return "Scale must be between 0.01 and 1.0"
-    return True
-
-
 def build_job_interactively(start_dir: Path | None = None) -> JobConfig:
-    base_dir = (start_dir or Path.cwd()).resolve()
+    base_dir = (start_dir or DEFAULT_SOURCE_DIR).expanduser().resolve()
     console.print("[bold]Clipflow[/bold] — race camera merge + mirror composite")
     console.print(f"Starting directory: [dim]{base_dir}[/dim]\n")
 
     forward_dir = ask_directory("Forward camera folder", base_dir)
-    rear_dir = ask_directory("Rear camera folder", forward_dir.parent if forward_dir.parent.exists() else base_dir)
+    rear_dir = ask_directory("Rear camera folder", forward_dir)
 
     forward = ask_video_selection("Select forward clips", forward_dir)
     rear_pool = discover_videos(rear_dir)
@@ -142,13 +121,11 @@ def build_job_interactively(start_dir: Path | None = None) -> JobConfig:
     if not questionary.confirm("Proceed with this pairing?", default=True, style=PROMPT_STYLE).ask():
         raise KeyboardInterrupt
 
-    output_path = ask_output_path(base_dir / "race-composite.mp4")
-    overlay_scale = ask_overlay_scale()
+    output_path = ask_output_path(forward_dir / "race-composite.mp4")
 
     return JobConfig(
         forward_clips=forward_sorted,
         rear_clips=rear_matched,
         output_path=output_path,
-        overlay_scale=overlay_scale,
         work_dir=output_path.parent / ".clipflow-work",
     )

@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from clipflow.config import DEFAULT_OVERLAY
+
 
 @dataclass(frozen=True)
 class ClipPair:
@@ -16,7 +18,7 @@ class JobConfig:
     forward_clips: list[Path]
     rear_clips: list[Path]
     output_path: Path
-    overlay_scale: float = 0.10
+    overlay_scale: float = DEFAULT_OVERLAY.scale
     work_dir: Path | None = None
 
     @property

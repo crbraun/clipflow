@@ -10,6 +10,12 @@ from rich.console import Console
 
 from clipflow.config import DEFAULT_OVERLAY, DEFAULT_REAR, OverlayConfig, RearConfig
 from clipflow.models import JobConfig
+from clipflow.progress import (
+    PHASE_COMPOSITE,
+    PHASE_FORWARD,
+    PHASE_REAR,
+    JobProgressTracker,
+)
 
 console = Console()
 TIME_RE = re.compile(r"out_time_ms=(\d+)")
@@ -42,7 +48,8 @@ def write_concat_list(clips: list[Path], list_path: Path) -> None:
 
 def build_rear_filter(overlay: OverlayConfig, rear: RearConfig) -> str:
     scale = overlay.scale
-    chain = f"crop=iw:ih/2:0:0,scale=iw*{scale}:ih*{scale}"
+    keep_fraction = 1 - rear.bottom_trim_fraction
+    chain = f"crop=iw:ih*{keep_fraction}:0:0,scale=iw*{scale}:ih*{scale}"
     if rear.mirror:
         chain = f"{chain},hflip"
     return chain
@@ -71,7 +78,6 @@ def run_ffmpeg(
         return
 
     command.extend(["-progress", "pipe:2", "-nostats"])
-    console.print(f"[cyan]{description}[/cyan]")
     process = subprocess.Popen(
         command,
         stdout=subprocess.PIPE,
@@ -184,7 +190,7 @@ def process_job(
     job: JobConfig,
     *,
     overlay: OverlayConfig = DEFAULT_OVERLAY,
-    on_progress: Callable[[float | None], None] | None = None,
+    progress: JobProgressTracker | None = None,
 ) -> Path:
     forward_clips = sort_clips(job.forward_clips)
     rear_clips = sort_clips(job.rear_clips)
@@ -195,13 +201,32 @@ def process_job(
     forward_master = work_dir / "forward_concat.mp4"
     rear_master = work_dir / "rear_concat.mp4"
 
-    concat_clips(forward_clips, forward_master, on_progress=on_progress)
-    concat_clips(rear_clips, rear_master, on_progress=on_progress)
+    if progress:
+        progress.begin_phase(PHASE_FORWARD)
+        concat_clips(forward_clips, forward_master, on_progress=progress.callback(PHASE_FORWARD))
+        progress.complete_phase(PHASE_FORWARD)
+
+        progress.begin_phase(PHASE_REAR)
+        concat_clips(rear_clips, rear_master, on_progress=progress.callback(PHASE_REAR))
+        progress.complete_phase(PHASE_REAR)
+
+        progress.begin_phase(PHASE_COMPOSITE)
+        composite_videos(
+            forward_master,
+            rear_master,
+            job.output_path,
+            overlay=overlay,
+            on_progress=progress.callback(PHASE_COMPOSITE),
+        )
+        progress.complete_phase(PHASE_COMPOSITE)
+        return job.output_path
+
+    concat_clips(forward_clips, forward_master)
+    concat_clips(rear_clips, rear_master)
     composite_videos(
         forward_master,
         rear_master,
         job.output_path,
         overlay=overlay,
-        on_progress=on_progress,
     )
     return job.output_path

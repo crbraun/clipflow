@@ -25,7 +25,7 @@ def test_validate_pairing_requires_equal_counts() -> None:
 
 def test_rear_filter_includes_crop_mirror_and_scale() -> None:
     rear = build_rear_filter(OverlayConfig(scale=0.10), DEFAULT_REAR)
-    assert "crop=iw:ih/2:0:0" in rear
+    assert "crop=iw:ih*0.55:0:0" in rear
     assert "hflip" in rear
     assert "scale=iw*0.1:ih*0.1" in rear
 

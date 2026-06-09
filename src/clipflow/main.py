@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import typer
 from rich.console import Console
 
 from clipflow.config import OverlayConfig
 from clipflow.ffmpeg import process_job
 from clipflow.interactive import build_job_interactively
-from clipflow.progress import create_progress_callback
+from clipflow.progress import create_job_progress
 
 app = typer.Typer(no_args_is_help=False, add_completion=False, help="Race camera merge and mirror composite.")
 console = Console()
@@ -23,24 +21,8 @@ def main(ctx: typer.Context) -> None:
 
 
 @app.command()
-def run(
-    output: Path = typer.Option(
-        Path("race-composite.mp4"),
-        "--output",
-        "-o",
-        help="Output MP4 path.",
-    ),
-    scale: float = typer.Option(
-        0.10,
-        "--scale",
-        min=0.01,
-        max=1.0,
-        help="Rear inset scale after crop (fraction).",
-    ),
-) -> None:
+def run() -> None:
     """Interactive workflow: select forward/rear clips and build the composite."""
-    _ = output
-    _ = scale
     run_interactive()
 
 
@@ -55,11 +37,10 @@ def run_interactive() -> None:
         raise typer.Exit(code=1) from exc
 
     overlay = OverlayConfig(scale=job.overlay_scale)
-    progress, update = create_progress_callback("Processing video")
 
     try:
-        with progress:
-            output_path = process_job(job, overlay=overlay, on_progress=update)
+        with create_job_progress(job.forward_clips, job.rear_clips) as progress:
+            output_path = process_job(job, overlay=overlay, progress=progress)
     except RuntimeError as exc:
         console.print(f"\n[red]FFmpeg error:[/red]\n{exc}")
         raise typer.Exit(code=1) from exc
