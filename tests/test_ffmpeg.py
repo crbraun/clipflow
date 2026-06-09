@@ -33,4 +33,17 @@ def test_rear_filter_includes_crop_mirror_and_scale() -> None:
 def test_overlay_filter_graph() -> None:
     graph = build_overlay_filter(OverlayConfig(scale=0.10))
     assert graph.startswith("[1:v]")
-    assert "overlay=(W-w)/2:0[outv]" in graph
+    assert "overlay=(W-w)/2:0,setpts=PTS-STARTPTS[outv]" in graph
+    assert "aout" not in graph
+    assert "asetpts" not in graph
+
+
+def test_overlay_filter_delays_rear_overlay() -> None:
+    graph = build_overlay_filter(OverlayConfig(scale=0.10), rear_delay=5.0)
+    assert "overlay=(W-w)/2:0:enable='gte(t\\,5.000)'" in graph
+    assert "setpts=PTS+5.000/TB" not in graph
+
+
+def test_overlay_filter_trims_rear_when_it_starts_early() -> None:
+    graph = build_overlay_filter(OverlayConfig(scale=0.10), rear_trim_start=2.5)
+    assert "trim=start=2.500,setpts=PTS-STARTPTS" in graph

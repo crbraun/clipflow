@@ -15,28 +15,24 @@ from rich.progress import (
 
 from clipflow.probe import total_duration
 
-PHASE_FORWARD = "forward"
-PHASE_REAR = "rear"
-PHASE_COMPOSITE = "composite"
+PHASE_PAIRS = "pairs"
+PHASE_CONCAT = "concat"
 
 PHASE_LABELS = {
-    PHASE_FORWARD: "Phase 1/3: Concat forward",
-    PHASE_REAR: "Phase 2/3: Concat rear",
-    PHASE_COMPOSITE: "Phase 3/3: Composite overlay",
+    PHASE_PAIRS: "Phase 1/2: Sync and composite clips",
+    PHASE_CONCAT: "Phase 2/2: Concat segments",
 }
 
 
 class JobProgressTracker:
     def __init__(
         self,
-        forward_seconds: float | None,
-        rear_seconds: float | None,
-        composite_seconds: float | None,
+        pairs_seconds: float | None,
+        concat_seconds: float | None,
     ) -> None:
         self._durations = {
-            PHASE_FORWARD: forward_seconds,
-            PHASE_REAR: rear_seconds,
-            PHASE_COMPOSITE: composite_seconds,
+            PHASE_PAIRS: pairs_seconds,
+            PHASE_CONCAT: concat_seconds,
         }
         self._tasks: dict[str, TaskID] = {}
         self.progress = Progress(
@@ -82,12 +78,8 @@ class JobProgressTracker:
 
 def create_job_progress(forward_clips: list[Path], rear_clips: list[Path]) -> JobProgressTracker:
     try:
-        forward_seconds = total_duration(forward_clips)
-        rear_seconds = total_duration(rear_clips)
-        composite_seconds = forward_seconds
+        total_seconds = total_duration(forward_clips)
     except RuntimeError:
-        forward_seconds = None
-        rear_seconds = None
-        composite_seconds = None
+        total_seconds = None
 
-    return JobProgressTracker(forward_seconds, rear_seconds, composite_seconds)
+    return JobProgressTracker(total_seconds, total_seconds)

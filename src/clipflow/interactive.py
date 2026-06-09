@@ -9,7 +9,7 @@ from rich.table import Table
 
 from clipflow.config import DEFAULT_SOURCE_DIR
 from clipflow.ffmpeg import sort_clips, validate_pairing
-from clipflow.matching import format_mtime, format_video_label, match_rear_by_mtime
+from clipflow.matching import format_creation_time, format_mtime, format_sync_delay, format_video_label, match_rear_by_mtime
 from clipflow.models import JobConfig
 
 console = Console()
@@ -67,16 +67,18 @@ def show_pairing_preview(forward_sorted: list[Path], rear_matched: list[Path]) -
     table = Table(title="Clip pairing (forward sorted by filename, rear matched by modified time)")
     table.add_column("#", justify="right")
     table.add_column("Forward")
-    table.add_column("Forward modified")
+    table.add_column("Forward created")
     table.add_column("Rear")
-    table.add_column("Rear modified")
+    table.add_column("Rear created")
+    table.add_column("Sync")
     for index, (front, back) in enumerate(zip(forward_sorted, rear_matched), start=1):
         table.add_row(
             str(index),
             front.name,
-            format_mtime(front),
+            format_creation_time(front),
             back.name,
-            format_mtime(back),
+            format_creation_time(back),
+            format_sync_delay(front, back),
         )
     console.print(table)
 

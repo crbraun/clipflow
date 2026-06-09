@@ -1,13 +1,11 @@
-from __future__ import annotations
-
-from clipflow.progress import PHASE_COMPOSITE, PHASE_FORWARD, JobProgressTracker
+from clipflow.progress import PHASE_CONCAT, PHASE_PAIRS, JobProgressTracker
 
 
 def test_job_progress_tracker_updates_and_completes_phases() -> None:
-    tracker = JobProgressTracker(forward_seconds=100.0, rear_seconds=80.0, composite_seconds=100.0)
-    tracker.begin_phase(PHASE_FORWARD)
-    tracker.update(PHASE_FORWARD, 25.0)
-    tracker.complete_phase(PHASE_FORWARD)
-    tracker.begin_phase(PHASE_COMPOSITE)
-    tracker.update(PHASE_COMPOSITE, 50.0)
-    tracker.complete_phase(PHASE_COMPOSITE)
+    tracker = JobProgressTracker(pairs_seconds=100.0, concat_seconds=100.0)
+    tracker.begin_phase(PHASE_PAIRS)
+    tracker.update(PHASE_PAIRS, 25.0)
+    tracker.complete_phase(PHASE_PAIRS)
+    tracker.begin_phase(PHASE_CONCAT)
+    tracker.update(PHASE_CONCAT, 50.0)
+    tracker.complete_phase(PHASE_CONCAT)
