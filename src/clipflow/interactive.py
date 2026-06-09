@@ -71,6 +71,7 @@ def show_pairing_preview(forward_sorted: list[Path], rear_matched: list[Path]) -
     table.add_column("Rear")
     table.add_column("Rear created")
     table.add_column("Sync")
+    console.print("[dim]Analyzing audio to align rear overlay (this can take a moment)...[/dim]")
     for index, (front, back) in enumerate(zip(forward_sorted, rear_matched), start=1):
         table.add_row(
             str(index),

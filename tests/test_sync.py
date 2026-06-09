@@ -1,7 +1,10 @@
 from pathlib import Path
 from unittest.mock import patch
 
+from clipflow.audiosync import AudioOffset
 from clipflow.sync import (
+    _resolve_rear_sync,
+    _resolve_rear_sync_cached,
     clip_start_timestamp,
     compute_rear_sync,
     file_recording_start_time,
@@ -25,17 +28,60 @@ def test_timestamp_sync_offset_when_rear_starts_later(tmp_path: Path) -> None:
     assert trim == 0.0
 
 
-def test_compute_rear_sync_matches_timestamp_sync_offset(tmp_path: Path) -> None:
+def test_compute_rear_sync_falls_back_to_metadata_without_audio(tmp_path: Path) -> None:
     forward = tmp_path / "forward.mov"
     rear = tmp_path / "rear.mov"
     forward.write_bytes(b"test")
     rear.write_bytes(b"test")
 
-    with patch(
-        "clipflow.sync.clip_start_timestamp",
-        side_effect=[105.0, 100.0],
+    _resolve_rear_sync_cached.cache_clear()
+    with (
+        patch("clipflow.sync.clip_start_timestamp", side_effect=[105.0, 100.0]),
+        patch("clipflow.sync.estimate_audio_offset", return_value=None),
     ):
         assert compute_rear_sync(forward, rear) == (5.0, 0.0)
+
+
+def test_resolve_rear_sync_uses_audio_when_confident(tmp_path: Path) -> None:
+    forward = tmp_path / "forward.mov"
+    rear = tmp_path / "rear.mov"
+    forward.write_bytes(b"test")
+    rear.write_bytes(b"test")
+
+    with (
+        patch("clipflow.sync.clip_start_timestamp", side_effect=[158.0, 100.0]),
+        patch(
+            "clipflow.sync.estimate_audio_offset",
+            return_value=AudioOffset(seconds=43.7, confidence=0.9),
+        ),
+    ):
+        result = _resolve_rear_sync(forward, rear)
+
+    assert result.source == "audio"
+    assert result.delay == 43.7
+    assert result.trim == 0.0
+    assert result.confidence == 0.9
+
+
+def test_resolve_rear_sync_falls_back_when_audio_weak(tmp_path: Path) -> None:
+    forward = tmp_path / "forward.mov"
+    rear = tmp_path / "rear.mov"
+    forward.write_bytes(b"test")
+    rear.write_bytes(b"test")
+
+    with (
+        patch("clipflow.sync.clip_start_timestamp", side_effect=[158.0, 100.0]),
+        patch(
+            "clipflow.sync.estimate_audio_offset",
+            return_value=AudioOffset(seconds=43.7, confidence=0.1),
+        ),
+    ):
+        result = _resolve_rear_sync(forward, rear)
+
+    assert result.source == "metadata"
+    assert result.delay == 58.0
+    assert result.trim == 0.0
+    assert result.confidence == 0.1
 
 
 def test_timestamp_sync_offset_trims_when_rear_starts_earlier(tmp_path: Path) -> None:

@@ -62,12 +62,18 @@ def build_overlay_filter(
     rear_filter = build_rear_filter(overlay, rear)
     if rear_trim_start > 0:
         rear_filter = f"{rear_filter},trim=start={rear_trim_start:.3f},setpts=PTS-STARTPTS"
-    overlay_filter = f"overlay={overlay.x_expr}:{overlay.y_expr}"
     if rear_delay > 0:
-        overlay_filter = f"{overlay_filter}:enable='gte(t\\,{rear_delay:.3f})'"
+        # Shift the rear content later so rear frame 0 appears at t=rear_delay.
+        # (Gating with overlay `enable` would only hide the inset, not move it,
+        # leaving the rear running ahead by the offset.)
+        rear_filter = f"{rear_filter},setpts=PTS+{rear_delay:.3f}/TB"
+    # eof_action=pass keeps the output at the forward clip's length: the inset
+    # simply disappears before the rear starts or after it ends, without
+    # stretching the timeline.
     return (
         f"[1:v]{rear_filter}[rear];"
-        f"[0:v][rear]{overlay_filter},setpts=PTS-STARTPTS[outv]"
+        f"[0:v][rear]overlay={overlay.x_expr}:{overlay.y_expr}:eof_action=pass,"
+        f"setpts=PTS-STARTPTS[outv]"
     )
 
 

@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 
 from clipflow.ffmpeg import sort_clips
-from clipflow.sync import clip_start_timestamp, timestamp_sync_offset
+from clipflow.sync import clip_start_timestamp, resolve_rear_sync
 
 
 def format_timestamp(timestamp: float) -> str:
@@ -20,14 +20,22 @@ def format_creation_time(path: Path) -> str:
 
 
 def format_sync_delay(forward: Path, rear: Path) -> str:
-    sync_offset, trim = timestamp_sync_offset(forward, rear)
-    if trim > 0 and sync_offset > 0:
-        return f"trim {trim:.1f}s rear, +{sync_offset:.1f}s overlay"
-    if trim > 0:
-        return f"trim {trim:.1f}s rear"
-    if sync_offset > 0:
-        return f"+{sync_offset:.1f}s overlay"
-    return "aligned"
+    result = resolve_rear_sync(forward, rear)
+
+    if result.trim > 0:
+        timing = f"trim {result.trim:.1f}s rear"
+    elif result.delay > 0:
+        timing = f"+{result.delay:.1f}s overlay"
+    else:
+        timing = "aligned"
+
+    if result.source == "audio" and result.confidence is not None:
+        method = f"audio {result.confidence:.2f}"
+    elif result.confidence is not None:
+        method = f"metadata (audio {result.confidence:.2f} too weak)"
+    else:
+        method = "metadata"
+    return f"{timing} [{method}]"
 
 
 def format_video_label(path: Path) -> str:
